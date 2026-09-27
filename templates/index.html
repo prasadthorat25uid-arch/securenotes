@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyVault • Private Document Sharing for 3 Friends</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z'/><path d='M6 6h10'/><path d='M6 10h10'/><rect width='6' height='5' x='11' y='14' rx='1'/><path d='M14 14v-2a1 1 0 0 0-2 0v2'/></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Mammoth JS for client-side in-browser DOCX rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    .docx-rendered h1, .docx-rendered h2, .docx-rendered h3 { font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; color: #1e293b; }
+    .docx-rendered p { margin-bottom: 0.75rem; line-height: 1.6; }
+    .docx-rendered ul, .docx-rendered ol { margin-left: 1.5rem; margin-bottom: 0.75rem; }
+    .docx-rendered table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    .docx-rendered th, .docx-rendered td { border: 1px solid #cbd5e1; padding: 6px 10px; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-30 w-full backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-lg tracking-tight text-slate-900 dark:text-white">StudyVault</span>
+            <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Private</span>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">Private Space for Exactly 3 Friends</p>
+        </div>
+      </div>
+
+      <!-- 3 Friends Avatar Bar & Switcher -->
+      <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-full border border-slate-200 dark:border-slate-700/60" id="friendsBar">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Right Controls -->
+      <div class="flex items-center gap-2">
+        <!-- Dark/Light Theme Button -->
+        <button onclick="toggleTheme()" class="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Toggle Theme">
+          <i data-lucide="sun" id="sunIcon" class="w-4 h-4 text-amber-400 hidden"></i>
+          <i data-lucide="moon" id="moonIcon" class="w-4 h-4 text-slate-600 dark:text-slate-300"></i>
+        </button>
+
+        <!-- Current User Menu -->
+        <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+          <img id="currentUserAvatar" src="" class="w-8 h-8 rounded-full object-cover ring-2 ring-indigo-500/30">
+          <button onclick="logout()" class="p-2 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors" title="Log Out">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+    
+    <!-- Top Welcome & Upload Banner -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-slate-800">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Study Group Documents
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          Active friend: <span id="currentUserName" class="font-semibold text-indigo-600 dark:text-indigo-400">Loading...</span> • Files are private to the 3 authorized friends.
+        </p>
+      </div>
+
+      <!-- Prominent "Upload Document" Button -->
+      <button onclick="openUploadModal()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-xs sm:text-sm transition-all hover:scale-[1.02] active:scale-[0.98]">
+        <i data-lucide="upload-cloud" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        <span>Upload Document</span>
+      </button>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 my-6">
+      <div class="flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div class="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+          <i data-lucide="folder-open" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p id="statTotal" class="text-xl font-bold text-slate-900 dark:text-white">0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">All Documents</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+          <i data-lucide="share-2" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p id="statShared" class="text-xl font-bold text-slate-900 dark:text-white">0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Shared with Group</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div class="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+          <i data-lucide="file-text" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p id="statMyUploads" class="text-xl font-bold text-slate-900 dark:text-white">0</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">My Uploads</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div class="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
+          <i data-lucide="hard-drive" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p id="statStorage" class="text-xl font-bold text-slate-900 dark:text-white">0 MB</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Private Storage</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Bar & View Mode Toggle -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5">
+      <div class="relative flex-1 max-w-lg">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3 text-slate-400"></i>
+        <input
+          id="searchInput"
+          type="text"
+          oninput="handleSearch(this.value)"
+          placeholder="Search by file name, subject, category, uploader, tags..."
+          class="w-full pl-10 pr-9 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 shadow-xs"
+        >
+        <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-1 self-end sm:self-center p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <button onclick="setViewMode('grid')" id="gridBtn" class="p-1.5 rounded-lg text-xs font-medium bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs" title="Grid View">
+          <i data-lucide="layout-grid" class="w-4 h-4"></i>
+        </button>
+        <button onclick="setViewMode('list')" id="listBtn" class="p-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200" title="List View">
+          <i data-lucide="list" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs: All Documents | My Uploads | Shared Documents | Recent Documents -->
+    <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-px mb-5 text-xs sm:text-sm">
+      <button onclick="setTab('all')" id="tab-all" class="tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 font-medium border-indigo-600 text-indigo-600 dark:text-indigo-400 font-semibold whitespace-nowrap">
+        <i data-lucide="folder-open" class="w-4 h-4"></i>
+        <span>All Documents</span>
+      </button>
+
+      <button onclick="setTab('my_uploads')" id="tab-my_uploads" class="tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 font-medium border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap">
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        <span>My Uploads</span>
+      </button>
+
+      <button onclick="setTab('shared')" id="tab-shared" class="tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 font-medium border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap">
+        <i data-lucide="share-2" class="w-4 h-4"></i>
+        <span>Shared Documents</span>
+      </button>
+
+      <button onclick="setTab('recent')" id="tab-recent" class="tab-btn flex items-center gap-2 py-2.5 px-3.5 border-b-2 font-medium border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap">
+        <i data-lucide="clock" class="w-4 h-4"></i>
+        <span>Recent Documents</span>
+      </button>
+    </div>
+
+    <!-- Categories Filter Pills -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-6" id="categoryPills">
+      <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-400 shrink-0 mr-1">
+        <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+        <span>Category:</span>
+      </div>
+      <!-- Rendered by JS -->
+    </div>
+
+    <!-- Documents Grid / List Container -->
+    <div id="docsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Injected by JS -->
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-400">
+    <p>StudyVault • Private Document Sharing Space for 3 Friends</p>
+    <p class="mt-1 text-[11px] text-slate-500">
+      Authorized accounts: saiprasadthorat29@gmail.com • vks20252026@gmail.com • sanskarkulkarni9825@gmail.com
+    </p>
+  </footer>
+
+  <!-- UPLOAD MODAL -->
+  <div id="uploadModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+    <div class="w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+            <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 dark:text-white text-base">Upload Study Document</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">PDF, DOC, DOCX files will be saved in private storage</p>
+          </div>
+        </div>
+        <button onclick="closeUploadModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="uploadForm" onsubmit="handleUploadSubmit(event)" class="p-6 overflow-y-auto space-y-4 text-xs">
+        <div id="uploadError" class="hidden p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs"></div>
+
+        <!-- File Dropzone -->
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Select Document (PDF, DOC, DOCX) *</label>
+          <div id="dropzone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 text-center cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-800/20 transition-all">
+            <input type="file" id="fileInput" accept=".pdf,.doc,.docx" class="hidden" onchange="handleFileChosen(this.files[0])">
+            <div id="dropzoneEmpty" class="flex flex-col items-center">
+              <div class="p-3 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-2">
+                <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+              </div>
+              <p class="font-semibold text-slate-800 dark:text-slate-200">Click to browse or drag and drop file here</p>
+              <p class="text-slate-400 text-[11px] mt-1">Supports PDF, DOC, DOCX up to 50MB</p>
+            </div>
+            <div id="dropzoneSelected" class="hidden flex items-center justify-center gap-3">
+              <div class="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+                <i data-lucide="file-text" class="w-6 h-6"></i>
+              </div>
+              <div class="text-left">
+                <p id="selectedFileName" class="font-semibold text-sm text-slate-900 dark:text-white truncate max-w-xs"></p>
+                <p id="selectedFileSize" class="text-xs text-slate-500 dark:text-slate-400"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Document Title</label>
+            <input type="text" id="uploadTitle" placeholder="e.g. CN Unit 2 Notes" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Subject / Category *</label>
+            <select id="uploadCategory" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="Notes">Notes</option>
+              <option value="Assignments">Assignments</option>
+              <option value="Lab Files">Lab Files</option>
+              <option value="Question Papers">Question Papers</option>
+              <option value="Study Material">Study Material</option>
+              <option value="Projects">Projects</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Description (Optional)</label>
+          <textarea id="uploadDescription" rows="2" placeholder="What topics or questions are covered in this document?" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tags (Comma separated)</label>
+          <input type="text" id="uploadTags" placeholder="e.g. Computer Networks, Unit 2, Exams" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <!-- Share with Group Switch -->
+        <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+              <i data-lucide="share-2" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="font-semibold text-slate-900 dark:text-white">Share with Group</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Allow other friends to view and download this document</p>
+            </div>
+          </div>
+          <input type="checkbox" id="uploadShare" checked class="w-5 h-5 text-indigo-600 rounded">
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="closeUploadModal()" class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium">Cancel</button>
+          <button type="submit" id="uploadSubmitBtn" class="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+            <span>Upload Document</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DOCUMENT PREVIEW MODAL (PDF & DOCX In-Browser Reader) -->
+  <div id="previewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+    <div class="w-full max-w-5xl h-[88vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-3 min-w-0 mr-4">
+          <span id="previewBadge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase">PDF</span>
+          <div class="min-w-0">
+            <h2 id="previewTitle" class="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate"></h2>
+            <p id="previewSubtitle" class="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate"></p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <a id="previewDownloadLink" href="#" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Download</span>
+          </a>
+          <button onclick="closePreviewModal()" class="p-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Viewer Body -->
+      <div class="relative flex-1 bg-slate-100 dark:bg-slate-950 overflow-hidden flex flex-col items-center justify-center p-2 sm:p-4">
+        <!-- PDF Viewer Object/Iframe -->
+        <object id="pdfViewer" data="" type="application/pdf" class="hidden w-full h-full rounded-xl bg-slate-800 shadow-inner">
+          <iframe id="pdfIframe" src="" class="w-full h-full">
+            <p class="text-center p-4 text-xs text-white">Your browser does not support inline PDF viewing. Please download the document.</p>
+          </iframe>
+        </object>
+
+        <!-- DOCX In-Browser Renderer Container -->
+        <div id="docxViewer" class="hidden w-full h-full overflow-y-auto p-4 flex justify-center">
+          <div id="docxContent" class="docx-rendered bg-white text-slate-900 rounded-xl p-8 shadow-xl max-w-4xl w-full min-h-[500px]"></div>
+        </div>
+
+        <!-- DOC Fallback Container -->
+        <div id="docFallback" class="hidden text-center p-8 max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl">
+          <div class="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="file-text" class="w-8 h-8"></i>
+          </div>
+          <h3 id="fallbackTitle" class="font-bold text-base text-slate-900 dark:text-white mb-1"></h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+            Microsoft Word binary format. Click below to securely download and open in Word or Google Docs.
+          </p>
+          <a id="fallbackDownloadBtn" href="#" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md text-xs">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Download Document</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT / RENAME MODAL -->
+  <div id="editModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+    <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+        <h3 class="font-bold text-slate-900 dark:text-white text-base">Rename & Edit Document</h3>
+        <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-200"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="handleEditSubmit(event)" class="space-y-4 text-xs">
+        <input type="hidden" id="editDocId">
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Document Title *</label>
+          <input type="text" id="editTitle" required class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Category</label>
+          <select id="editCategory" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="Notes">Notes</option>
+            <option value="Assignments">Assignments</option>
+            <option value="Lab Files">Lab Files</option>
+            <option value="Question Papers">Question Papers</option>
+            <option value="Study Material">Study Material</option>
+            <option value="Projects">Projects</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+          <textarea id="editDescription" rows="2" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Tags (comma separated)</label>
+          <input type="text" id="editTags" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
+          <span class="font-semibold text-slate-900 dark:text-white">Share with Group</span>
+          <input type="checkbox" id="editShare" class="w-5 h-5 text-indigo-600 rounded">
+        </div>
+        <div class="pt-3 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl font-semibold bg-indigo-600 hover:bg-indigo-700 text-white">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl backdrop-blur-md border text-xs font-medium bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
+    <i data-lucide="check-circle" id="toastIcon" class="w-5 h-5 text-emerald-500"></i>
+    <span id="toastMsg"></span>
+  </div>
+
+  <!-- APPLICATION LOGIC JAVASCRIPT -->
+  <script>
+    // State
+    let currentUser = null;
+    let authorizedFriends = [];
+    let allDocuments = [];
+    let currentTab = 'all';
+    let currentCategory = 'all';
+    let searchQuery = '';
+    let viewMode = 'grid';
+    let activeUploadFile = null;
+
+    const CATEGORIES = [
+      { id: 'all', label: 'All Categories' },
+      { id: 'Notes', label: 'Notes' },
+      { id: 'Assignments', label: 'Assignments' },
+      { id: 'Lab Files', label: 'Lab Files' },
+      { id: 'Question Papers', label: 'Question Papers' },
+      { id: 'Study Material', label: 'Study Material' },
+      { id: 'Projects', label: 'Projects' },
+      { id: 'Other', label: 'Other' },
+    ];
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderCategoryPills();
+      await loadCurrentUser();
+      await loadDocuments();
+      await loadStats();
+      lucide.createIcons();
+    });
+
+    async function loadCurrentUser() {
+      try {
+        const res = await fetch('/api/current-user');
+        if (!res.ok) {
+          window.location.href = '/login';
+          return;
+        }
+        const data = await res.json();
+        currentUser = data.user;
+        authorizedFriends = data.authorized_friends;
+
+        document.getElementById('currentUserName').textContent = currentUser.name;
+        document.getElementById('currentUserAvatar').src = currentUser.avatar;
+
+        renderFriendsBar();
+      } catch (e) {
+        console.error('Error fetching user', e);
+      }
+    }
+
+    function renderFriendsBar() {
+      const bar = document.getElementById('friendsBar');
+      bar.innerHTML = `
+        <div class="hidden md:flex items-center gap-1 px-2.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i>
+          <span>3 Friends:</span>
+        </div>
+      `;
+
+      authorizedFriends.forEach(friend => {
+        const isActive = (currentUser && currentUser.email.toLowerCase() === friend.email.toLowerCase());
+        const btn = document.createElement('button');
+        btn.onclick = () => switchFriend(friend.email);
+        btn.className = `relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+          isActive
+            ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-300 dark:ring-slate-600 font-semibold'
+            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+        }`;
+        btn.title = `Switch to ${friend.name} (${friend.email})`;
+
+        btn.innerHTML = `
+          <div class="relative">
+            <img src="${friend.avatar}" class="w-5 h-5 rounded-full object-cover">
+            ${isActive ? '<span class="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white dark:ring-slate-900"></span>' : ''}
+          </div>
+          <span class="hidden sm:inline">${friend.name.split(' ')[0]}</span>
+          ${isActive ? '<span class="text-[10px] text-emerald-500 font-bold hidden lg:inline">(You)</span>' : ''}
+        `;
+        bar.appendChild(btn);
+      });
+      lucide.createIcons();
+    }
+
+    async function switchFriend(email) {
+      if (currentUser && currentUser.email.toLowerCase() === email.toLowerCase()) return;
+      try {
+        const res = await fetch('/api/switch-friend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          currentUser = data.user;
+          document.getElementById('currentUserName').textContent = currentUser.name;
+          document.getElementById('currentUserAvatar').src = currentUser.avatar;
+          renderFriendsBar();
+          showToast(`Switched active view to ${currentUser.name}`);
+          await loadDocuments();
+          await loadStats();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadDocuments() {
+      try {
+        const params = new URLSearchParams({
+          tab: currentTab,
+          category: currentCategory,
+          q: searchQuery
+        });
+        const res = await fetch(`/api/documents?${params}`);
+        const data = await res.json();
+        allDocuments = data.documents || [];
+        renderDocuments();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        document.getElementById('statTotal').textContent = data.total_count;
+        document.getElementById('statShared').textContent = data.shared_count;
+        document.getElementById('statMyUploads').textContent = data.my_uploads_count;
+        document.getElementById('statStorage').textContent = formatBytes(data.total_bytes);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderCategoryPills() {
+      const container = document.getElementById('categoryPills');
+      CATEGORIES.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.id = `cat-${cat.id}`;
+        btn.onclick = () => setCategory(cat.id);
+        btn.className = `px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 ${
+          currentCategory === cat.id
+            ? 'bg-slate-900 text-white dark:bg-indigo-600 dark:text-white font-semibold'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+        }`;
+        btn.textContent = cat.label;
+        container.appendChild(btn);
+      });
+    }
+
+    function renderDocuments() {
+      const container = document.getElementById('docsContainer');
+      container.innerHTML = '';
+
+      if (viewMode === 'list') {
+        container.className = 'space-y-2';
+      } else {
+        container.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+      }
+
+      if (allDocuments.length === 0) {
+        container.className = 'block';
+        container.innerHTML = `
+          <div class="text-center py-16 px-4 bg-white dark:bg-slate-900/60 border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-3">
+              <i data-lucide="folder-open" class="w-7 h-7"></i>
+            </div>
+            <h3 class="font-bold text-base text-slate-900 dark:text-white mb-1">No documents found</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-4">
+              ${searchQuery ? `No files match "${searchQuery}".` : 'No study documents in this view.'}
+            </p>
+            <button onclick="openUploadModal()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+              <span>Upload Document</span>
+            </button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      allDocuments.forEach(doc => {
+        if (viewMode === 'list') {
+          container.appendChild(createDocumentRow(doc));
+        } else {
+          container.appendChild(createDocumentCard(doc));
+        }
+      });
+
+      lucide.createIcons();
+    }
+
+    function createDocumentCard(doc) {
+      const card = document.createElement('div');
+      card.className = "flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 p-5 shadow-xs hover:shadow-lg hover:border-indigo-400 transition-all";
+
+      const isOwner = currentUser && (doc.uploaded_by_email.toLowerCase() === currentUser.email.toLowerCase());
+      const typeInfo = getBadgeStyle(doc.file_type);
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-start justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase ${typeInfo.badge}">
+                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                ${typeInfo.label}
+              </span>
+              <span class="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                ${doc.category}
+              </span>
+              ${doc.shared_with_group 
+                ? '<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"><i data-lucide="share-2" class="w-3 h-3"></i> Group</span>'
+                : '<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-500/20"><i data-lucide="lock" class="w-3 h-3"></i> Private</span>'}
+            </div>
+            
+            <!-- Actions Dropdown -->
+            <div class="flex items-center gap-1">
+              <button onclick="toggleShare('${doc.id}')" title="${doc.shared_with_group ? 'Unshare from Group' : 'Share with Group'}" class="p-1 rounded-lg text-slate-400 hover:text-indigo-500">
+                <i data-lucide="share-2" class="w-4 h-4"></i>
+              </button>
+              <button onclick="openEditModal('${doc.id}')" title="Rename / Edit" class="p-1 rounded-lg text-slate-400 hover:text-indigo-500">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+              </button>
+              <button onclick="deleteDoc('${doc.id}', '${escapeHtml(doc.file_name)}')" title="Delete" class="p-1 rounded-lg text-slate-400 hover:text-rose-500">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <h3 onclick="openPreview('${doc.id}')" class="font-semibold text-base text-slate-900 dark:text-white line-clamp-1 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer transition-colors" title="${escapeHtml(doc.title)}">
+            ${escapeHtml(doc.title)}
+          </h3>
+          <p class="text-xs text-slate-400 dark:text-slate-500 font-mono truncate mt-0.5">${escapeHtml(doc.file_name)}</p>
+
+          ${doc.description ? `<p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-2 leading-relaxed">${escapeHtml(doc.description)}</p>` : ''}
+
+          ${doc.tags && doc.tags.length > 0 ? `
+            <div class="flex items-center gap-1.5 flex-wrap mt-2.5">
+              ${doc.tags.map(t => `<span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">#${escapeHtml(t)}</span>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-3">
+            <span class="font-medium text-slate-700 dark:text-slate-300">
+              ${typeInfo.label} • ${formatBytes(doc.file_size)}
+            </span>
+            <span class="flex items-center gap-1 text-[11px]">
+              <i data-lucide="calendar" class="w-3 h-3 text-slate-400"></i>
+              ${formatDate(doc.created_at)}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 mb-4 bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl">
+            <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold">
+              ${doc.uploaded_by_name[0]}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs text-slate-700 dark:text-slate-300 font-medium truncate">
+                Uploaded by <span class="font-semibold text-slate-900 dark:text-white">${escapeHtml(doc.uploaded_by_name)}</span>
+              </p>
+            </div>
+            ${isOwner ? '<span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">You</span>' : ''}
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="openPreview('${doc.id}')" class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 transition-all">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              <span>View</span>
+            </button>
+            <a href="/api/documents/${doc.id}/download" download class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-800 dark:hover:bg-slate-700 transition-all">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Download</span>
+            </a>
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+    function createDocumentRow(doc) {
+      const row = document.createElement('div');
+      row.className = "flex items-center justify-between p-3.5 px-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 transition-all gap-4 text-xs";
+
+      const typeInfo = getBadgeStyle(doc.file_type);
+      const isOwner = currentUser && (doc.uploaded_by_email.toLowerCase() === currentUser.email.toLowerCase());
+
+      row.innerHTML = `
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-[11px] uppercase shrink-0 ${typeInfo.badge}">
+            ${typeInfo.label}
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h4 onclick="openPreview('${doc.id}')" class="font-semibold text-sm text-slate-900 dark:text-white truncate cursor-pointer hover:text-indigo-500">
+                ${escapeHtml(doc.title)}
+              </h4>
+              ${doc.shared_with_group 
+                ? '<span class="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500">Group</span>'
+                : '<span class="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-500">Private</span>'}
+            </div>
+            <p class="text-[11px] text-slate-400 font-mono truncate">${escapeHtml(doc.file_name)}</p>
+          </div>
+        </div>
+
+        <div class="hidden md:block w-28 shrink-0 text-slate-500">${doc.category}</div>
+        <div class="hidden lg:block w-20 text-slate-500 shrink-0">${formatBytes(doc.file_size)}</div>
+        <div class="hidden sm:block w-36 text-slate-600 dark:text-slate-300 truncate shrink-0">
+          ${escapeHtml(doc.uploaded_by_name)} ${isOwner ? '(You)' : ''}
+        </div>
+        <div class="hidden xl:block w-24 text-slate-400 shrink-0">${formatDate(doc.created_at)}</div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button onclick="openPreview('${doc.id}')" class="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg" title="View"><i data-lucide="eye" class="w-4 h-4"></i></button>
+          <a href="/api/documents/${doc.id}/download" download class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg" title="Download"><i data-lucide="download" class="w-4 h-4"></i></a>
+          <button onclick="openEditModal('${doc.id}')" class="p-1.5 text-slate-400 hover:text-indigo-400 rounded-lg" title="Edit"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+          <button onclick="deleteDoc('${doc.id}', '${escapeHtml(doc.file_name)}')" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg" title="Delete"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+      `;
+      return row;
+    }
+
+    // Modal & Document Operations
+    function setTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-indigo-600', 'text-indigo-600', 'dark:text-indigo-400', 'font-semibold');
+        btn.classList.add('border-transparent', 'text-slate-500');
+      });
+      const active = document.getElementById(`tab-${tab}`);
+      if (active) {
+        active.classList.add('border-indigo-600', 'text-indigo-600', 'dark:text-indigo-400', 'font-semibold');
+        active.classList.remove('border-transparent', 'text-slate-500');
+      }
+      loadDocuments();
+    }
+
+    function setCategory(catId) {
+      currentCategory = catId;
+      document.querySelectorAll('#categoryPills button').forEach(btn => {
+        btn.className = "px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800";
+      });
+      const activeBtn = document.getElementById(`cat-${catId}`);
+      if (activeBtn) {
+        activeBtn.className = "px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 bg-slate-900 text-white dark:bg-indigo-600 dark:text-white font-semibold";
+      }
+      loadDocuments();
+    }
+
+    function handleSearch(val) {
+      searchQuery = val.trim();
+      document.getElementById('clearSearchBtn').classList.toggle('hidden', !searchQuery);
+      loadDocuments();
+    }
+
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      searchQuery = '';
+      document.getElementById('clearSearchBtn').classList.add('hidden');
+      loadDocuments();
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      document.getElementById('gridBtn').className = mode === 'grid' 
+        ? "p-1.5 rounded-lg text-xs font-medium bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs"
+        : "p-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200";
+      document.getElementById('listBtn').className = mode === 'list' 
+        ? "p-1.5 rounded-lg text-xs font-medium bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs"
+        : "p-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200";
+      renderDocuments();
+    }
+
+    // In-Browser Preview (PDF & DOCX)
+    async function openPreview(docId) {
+      const doc = allDocuments.find(d => d.id === docId);
+      if (!doc) return;
+
+      document.getElementById('previewTitle').textContent = doc.title;
+      document.getElementById('previewSubtitle').textContent = `${doc.file_name} • ${formatBytes(doc.file_size)} • Uploaded by ${doc.uploaded_by_name}`;
+      document.getElementById('previewDownloadLink').href = `/api/documents/${doc.id}/download`;
+
+      const typeInfo = getBadgeStyle(doc.file_type);
+      const badge = document.getElementById('previewBadge');
+      badge.textContent = typeInfo.label;
+      badge.className = `inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase ${typeInfo.badge}`;
+
+      const pdfViewer = document.getElementById('pdfViewer');
+      const docxViewer = document.getElementById('docxViewer');
+      const docFallback = document.getElementById('docFallback');
+
+      pdfViewer.classList.add('hidden');
+      docxViewer.classList.add('hidden');
+      docFallback.classList.add('hidden');
+
+      const previewUrl = `/api/documents/${doc.id}/preview`;
+
+      if (doc.file_type === 'pdf') {
+        pdfViewer.data = previewUrl;
+        document.getElementById('pdfIframe').src = previewUrl;
+        pdfViewer.classList.remove('hidden');
+      } else if (doc.file_type === 'docx') {
+        // Fetch binary and render HTML via Mammoth
+        docxViewer.classList.remove('hidden');
+        document.getElementById('docxContent').innerHTML = '<p class="text-slate-400 text-center py-10">Rendering Word Document...</p>';
+        try {
+          const res = await fetch(previewUrl);
+          const arrayBuffer = await res.arrayBuffer();
+          const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+          document.getElementById('docxContent').innerHTML = result.value || '<p class="text-slate-400">Empty Word Document.</p>';
+        } catch (err) {
+          document.getElementById('docxContent').innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-slate-600 font-semibold mb-2">Word document ready for download</p>
+              <p class="text-xs text-slate-400 mb-4">${doc.description || ''}</p>
+              <a href="/api/documents/${doc.id}/download" download class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs">Download to Open</a>
+            </div>
+          `;
+        }
+      } else {
+        // DOC format
+        docFallback.classList.remove('hidden');
+        document.getElementById('fallbackTitle').textContent = doc.file_name;
+        document.getElementById('fallbackDownloadBtn').href = `/api/documents/${doc.id}/download`;
+      }
+
+      document.getElementById('previewModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closePreviewModal() {
+      document.getElementById('previewModal').classList.add('hidden');
+      document.getElementById('pdfViewer').data = '';
+      document.getElementById('pdfIframe').src = '';
+    }
+
+    // Upload Modal Handling
+    function openUploadModal() {
+      document.getElementById('uploadModal').classList.remove('hidden');
+      resetUploadForm();
+      lucide.createIcons();
+    }
+
+    function closeUploadModal() {
+      document.getElementById('uploadModal').classList.add('hidden');
+      resetUploadForm();
+    }
+
+    function resetUploadForm() {
+      document.getElementById('uploadForm').reset();
+      document.getElementById('dropzoneEmpty').classList.remove('hidden');
+      document.getElementById('dropzoneSelected').classList.add('hidden');
+      document.getElementById('uploadError').classList.add('hidden');
+      activeUploadFile = null;
+    }
+
+    function handleFileChosen(file) {
+      if (!file) return;
+      const ext = '.' + file.name.split('.').pop().toLowerCase();
+      if (!['.pdf', '.doc', '.docx'].includes(ext)) {
+        showUploadError(`Invalid format '${ext}'. Only PDF, DOC, and DOCX are allowed.`);
+        return;
+      }
+      if (file.size > 50 * 1024 * 1024) {
+        showUploadError('File exceeds maximum size of 50MB.');
+        return;
+      }
+
+      activeUploadFile = file;
+      document.getElementById('selectedFileName').textContent = file.name;
+      document.getElementById('selectedFileSize').textContent = formatBytes(file.size);
+      document.getElementById('dropzoneEmpty').classList.add('hidden');
+      document.getElementById('dropzoneSelected').classList.remove('hidden');
+      document.getElementById('uploadError').classList.add('hidden');
+
+      const titleInput = document.getElementById('uploadTitle');
+      if (!titleInput.value) {
+        titleInput.value = file.name.replace(/\.[^/.]+$/, "");
+      }
+      lucide.createIcons();
+    }
+
+    function showUploadError(msg) {
+      const err = document.getElementById('uploadError');
+      err.textContent = msg;
+      err.classList.remove('hidden');
+    }
+
+    async function handleUploadSubmit(e) {
+      e.preventDefault();
+      if (!activeUploadFile) {
+        showUploadError('Please choose a PDF, DOC, or DOCX file to upload.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', activeUploadFile);
+      formData.append('title', document.getElementById('uploadTitle').value.trim());
+      formData.append('category', document.getElementById('uploadCategory').value);
+      formData.append('description', document.getElementById('uploadDescription').value.trim());
+      formData.append('tags', JSON.stringify(document.getElementById('uploadTags').value.split(',').map(t => t.trim()).filter(Boolean)));
+      formData.append('shared_with_group', document.getElementById('uploadShare').checked);
+
+      const btn = document.getElementById('uploadSubmitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>Uploading to Private Storage...</span>';
+
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+          closeUploadModal();
+          showToast(`"${data.document.file_name}" uploaded successfully!`);
+          await loadDocuments();
+          await loadStats();
+        } else {
+          showUploadError(data.error || 'Upload failed');
+        }
+      } catch (err) {
+        showUploadError('Network error during upload');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="upload-cloud" class="w-4 h-4"></i><span>Upload Document</span>';
+        lucide.createIcons();
+      }
+    }
+
+    // Toggle Sharing
+    async function toggleShare(docId) {
+      try {
+        const res = await fetch(`/api/documents/${docId}/toggle-share`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.shared_with_group ? 'Document shared with group' : 'Document set to private');
+          await loadDocuments();
+          await loadStats();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Edit Document
+    function openEditModal(docId) {
+      const doc = allDocuments.find(d => d.id === docId);
+      if (!doc) return;
+      document.getElementById('editDocId').value = doc.id;
+      document.getElementById('editTitle').value = doc.title;
+      document.getElementById('editCategory').value = doc.category;
+      document.getElementById('editDescription').value = doc.description || '';
+      document.getElementById('editTags').value = (doc.tags || []).join(', ');
+      document.getElementById('editShare').checked = doc.shared_with_group;
+      document.getElementById('editModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    async function handleEditSubmit(e) {
+      e.preventDefault();
+      const docId = document.getElementById('editDocId').value;
+      const payload = {
+        title: document.getElementById('editTitle').value.trim(),
+        category: document.getElementById('editCategory').value,
+        description: document.getElementById('editDescription').value.trim(),
+        tags: document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(Boolean),
+        shared_with_group: document.getElementById('editShare').checked
+      };
+
+      try {
+        const res = await fetch(`/api/documents/${docId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          closeEditModal();
+          showToast('Document details updated!');
+          await loadDocuments();
+          await loadStats();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Delete Document
+    async function deleteDoc(docId, filename) {
+      if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
+      try {
+        const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast(`Deleted "${filename}"`);
+          await loadDocuments();
+          await loadStats();
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Logout
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+
+    // Formatters & Helpers
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'Recent';
+      const d = new Date(dateString);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function getBadgeStyle(type) {
+      const t = (type || '').toLowerCase();
+      if (t === 'pdf') {
+        return { label: 'PDF', badge: 'bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300' };
+      } else if (t === 'docx') {
+        return { label: 'DOCX', badge: 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300' };
+      }
+      return { label: 'DOC', badge: 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300' };
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3500);
+      lucide.createIcons();
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      document.getElementById('sunIcon').classList.toggle('hidden', isDark);
+      document.getElementById('moonIcon').classList.toggle('hidden', !isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+  </script>
+</body>
+</html>
