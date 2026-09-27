@@ -115,7 +115,9 @@ def create_minimal_docx(filepath, title, text):
 
 def seed_initial_documents(conn):
     """Pre-seeds the initial study documents for the 3 friends."""
-    friends = {f["email"]: f for f in config.AUTHORIZED_FRIENDS}
+    f1 = config.AUTHORIZED_FRIENDS[0]
+    f2 = config.AUTHORIZED_FRIENDS[1]
+    f3 = config.AUTHORIZED_FRIENDS[2]
 
     sample_docs = [
         {
@@ -124,7 +126,7 @@ def seed_initial_documents(conn):
             "title": "CN Unit 2 Notes",
             "file_type": "pdf",
             "file_size": 2516582,  # 2.4 MB
-            "email": "saiprasadthorat29@gmail.com",
+            "friend": f1,
             "category": "Notes",
             "description": "Complete Computer Networks Unit 2 notes covering OSI Model, TCP/IP, and Flow Control.",
             "tags": ["Computer Networks", "Unit 2", "Exams"],
@@ -138,7 +140,7 @@ def seed_initial_documents(conn):
             "title": "DBMS Important Questions",
             "file_type": "docx",
             "file_size": 1153433,  # 1.1 MB
-            "email": "vks20252026@gmail.com",
+            "friend": f2,
             "category": "Question Papers",
             "description": "Frequently asked exam questions: Normalization 1NF to BCNF, ACID Properties, Transactions.",
             "tags": ["DBMS", "SQL", "Viva Prep"],
@@ -152,7 +154,7 @@ def seed_initial_documents(conn):
             "title": "OS Lab Experiment 4",
             "file_type": "pdf",
             "file_size": 3984588,  # 3.8 MB
-            "email": "sanskarkulkarni9825@gmail.com",
+            "friend": f3,
             "category": "Lab Files",
             "description": "Operating Systems Lab Experiment 4: Producer-Consumer Problem using Semaphores.",
             "tags": ["Operating Systems", "Lab", "C Programming"],
@@ -166,11 +168,11 @@ def seed_initial_documents(conn):
             "title": "Algorithms Personal Solutions",
             "file_type": "pdf",
             "file_size": 1887436,  # 1.8 MB
-            "email": "saiprasadthorat29@gmail.com",
+            "friend": f1,
             "category": "Study Material",
             "description": "Personal practice draft solutions for dynamic programming.",
             "tags": ["Algorithms", "Personal Draft"],
-            "shared": 0,  # Private to Saiprasad
+            "shared": 0,  # Private to Friend 1
             "created_at": "2026-09-24T16:00:00Z",
             "sample_text": "Algorithm Solutions: Dynamic Programming - 0/1 Knapsack, LCS, Matrix Chain."
         }
@@ -185,7 +187,7 @@ def seed_initial_documents(conn):
         else:
             create_minimal_docx(storage_path, item["title"], item["sample_text"])
 
-        friend = friends[item["email"]]
+        friend = item["friend"]
         conn.execute("""
             INSERT INTO documents (
                 id, file_name, title, file_type, file_size, storage_path,
@@ -199,7 +201,7 @@ def seed_initial_documents(conn):
             item["file_type"],
             item["file_size"],
             str(storage_path),
-            item["email"],
+            friend["email"],
             friend["name"],
             item["category"],
             item["description"],
@@ -237,7 +239,7 @@ def login_required(f):
 
 @app.before_request
 def setup_initial_session():
-    # If no session yet, default to Friend 1 (Saiprasad) for immediate convenient local preview
+    # If no session yet, default to Friend 1 for immediate convenient local preview
     if "user_email" not in session:
         session["user_email"] = config.AUTHORIZED_FRIENDS[0]["email"]
 

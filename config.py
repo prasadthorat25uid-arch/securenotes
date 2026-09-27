@@ -1,32 +1,36 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# The 3 Authorized Friends Whitelist (STRICT ACCESS CONTROL)
+# Load local environment variables from .env if present
+load_dotenv(BASE_DIR / ".env")
+
+# The 3 Authorized Friends Whitelist (Configurable via Environment Variables)
 AUTHORIZED_FRIENDS = [
     {
         "id": "friend-1",
-        "name": "Saiprasad Thorat",
-        "email": "saiprasadthorat29@gmail.com",
+        "name": os.environ.get("FRIEND_1_NAME", "Friend 1"),
+        "email": os.environ.get("FRIEND_1_EMAIL", "friend1@example.com").strip().lower(),
         "role": "Friend 1",
-        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Saiprasad&backgroundColor=b6e3f4",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Friend1&backgroundColor=b6e3f4",
         "color": "from-blue-500 to-indigo-600",
     },
     {
         "id": "friend-2",
-        "name": "VKS",
-        "email": "vks20252026@gmail.com",
+        "name": os.environ.get("FRIEND_2_NAME", "Friend 2"),
+        "email": os.environ.get("FRIEND_2_EMAIL", "friend2@example.com").strip().lower(),
         "role": "Friend 2",
-        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=VKS&backgroundColor=c0aede",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Friend2&backgroundColor=c0aede",
         "color": "from-emerald-500 to-teal-600",
     },
     {
         "id": "friend-3",
-        "name": "Sanskar Kulkarni",
-        "email": "sanskarkulkarni9825@gmail.com",
+        "name": os.environ.get("FRIEND_3_NAME", "Friend 3"),
+        "email": os.environ.get("FRIEND_3_EMAIL", "friend3@example.com").strip().lower(),
         "role": "Friend 3",
-        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Sanskar&backgroundColor=ffd5dc",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Friend3&backgroundColor=ffd5dc",
         "color": "from-purple-500 to-pink-600",
     },
 ]
