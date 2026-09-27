@@ -224,41 +224,36 @@ def get_friend_by_email(email):
     return None
 
 
-# Helper: require login decorator
+# Helper: login decorator (no login barrier - auto-assigns active profile)
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        current_email = session.get("user_email")
-        if not current_email or current_email.lower() not in config.ALLOWED_EMAILS:
-            if request.path.startswith("/api/"):
-                return jsonify({"error": "Unauthorized. Please log in as an authorized friend."}), 401
-            return redirect(url_for("login_page"))
+        if "user_email" not in session:
+            session["user_email"] = config.AUTHORIZED_FRIENDS[0]["email"]
         return f(*args, **kwargs)
     return decorated_function
 
 
 @app.before_request
 def setup_initial_session():
-    # If no session yet, default to Friend 1 for immediate convenient local preview
     if "user_email" not in session:
         session["user_email"] = config.AUTHORIZED_FRIENDS[0]["email"]
 
 
 # -------------------------
-# Web Page Routes
+# Web Page Routes (Direct Access, No Login Barrier)
 # -------------------------
 
 @app.route("/")
 def index():
-    user_email = session.get("user_email")
-    if not user_email or user_email.lower() not in config.ALLOWED_EMAILS:
-        return render_template("login.html", friends=config.AUTHORIZED_FRIENDS)
+    if "user_email" not in session:
+        session["user_email"] = config.AUTHORIZED_FRIENDS[0]["email"]
     return render_template("index.html")
 
 
 @app.route("/login")
 def login_page():
-    return render_template("login.html", friends=config.AUTHORIZED_FRIENDS)
+    return redirect(url_for("index"))
 
 
 # -------------------------
@@ -492,9 +487,7 @@ def api_upload():
 
 
 @app.route("/api/documents/<doc_id>/preview")
-@login_required
 def api_preview_document(doc_id):
-    current_email = session["user_email"].lower()
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
@@ -504,13 +497,9 @@ def api_preview_document(doc_id):
         abort(404, "Document not found")
 
     doc = dict(row)
-    is_owner = (doc["uploaded_by_email"].lower() == current_email)
-    if not (doc["shared_with_group"] or is_owner):
-        abort(403, "Access Denied: You do not have permission to view this document.")
-
     storage_path = Path(doc["storage_path"])
     if not storage_path.exists():
-        abort(404, "Document file not found on private storage.")
+        abort(404, "Document file not found on storage.")
 
     mimetypes = {
         "pdf": "application/pdf",
@@ -528,9 +517,7 @@ def api_preview_document(doc_id):
 
 
 @app.route("/api/documents/<doc_id>/download")
-@login_required
 def api_download_document(doc_id):
-    current_email = session["user_email"].lower()
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM documents WHERE id = ?", (doc_id,))
@@ -540,13 +527,9 @@ def api_download_document(doc_id):
         abort(404, "Document not found")
 
     doc = dict(row)
-    is_owner = (doc["uploaded_by_email"].lower() == current_email)
-    if not (doc["shared_with_group"] or is_owner):
-        abort(403, "Access Denied: You do not have permission to download this document.")
-
     storage_path = Path(doc["storage_path"])
     if not storage_path.exists():
-        abort(404, "Document file not found on private storage.")
+        abort(404, "Document file not found on storage.")
 
     return send_file(
         storage_path,
